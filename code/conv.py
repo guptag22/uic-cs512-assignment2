@@ -6,12 +6,12 @@ class Conv(nn.Module):
     """
     Convolution layer.
     """
-    def __init__(self, kernel_size, stride=1, padding=True):
+    def __init__(self, kernel_size, stride=1, padding=True, kernel_tensor=None):
         super(Conv, self).__init__()
-        self.init_params(kernel_size, stride, padding)
+        self.init_params(kernel_size, stride, padding, kernel_tensor)
 
 
-    def init_params(self, kernel_size, stride, padding):
+    def init_params(self, kernel_size, stride, padding, kernel_tensor):
         """
         Initialize the layer parameters
         :return:
@@ -20,7 +20,11 @@ class Conv(nn.Module):
         self.stride = stride
         self.padding = padding
         # TODO: Initialize the kernel
-        self.kernel = torch.tensor([[1, 0, 1],[0, 1, 0],[1, 0, 1]])
+        if kernel_tensor == None:
+            self.kernel = torch.randint(0, 2, (self.kernel_size, self.kernel_size))
+        else:
+            self.kernel = kernel_tensor
+        # print("kernel :\n", self.kernel)
         self.padding_layer = nn.ZeroPad2d(self.kernel_size//2)
 
     def forward(self, image):
@@ -51,11 +55,11 @@ class Conv(nn.Module):
                         conv_image.append(torch.sum(this_padded_image_view * self.kernel).item())
                 conv_image = torch.tensor(conv_image)
                 conv_image = torch.reshape(conv_image, target_shape)
-                print(conv_image.shape)
+                # print(conv_image.shape)
                 conv_image = torch.unsqueeze(conv_image, 0)
                 # TODO: stack conv images
             conv_images[n] = conv_image
-        print(conv_images.shape)
+        # print(conv_images.shape)
         return conv_images
 
 
@@ -80,6 +84,7 @@ if __name__ == "__main__":
     # print(image * k)
     image = torch.unsqueeze(image, 0)
     image = torch.unsqueeze(image, 0)
+    filter = torch.tensor([[1, 0, 1],[0, 1, 0],[1, 0, 1]])
     # print(image.shape)
-    conv = Conv(3, padding=False)
+    conv = Conv(3, kernel_tensor=filter)
     print(conv(image))
