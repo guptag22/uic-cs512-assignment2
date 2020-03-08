@@ -20,7 +20,7 @@ class Conv(nn.Module):
         self.stride = stride
         self.padding = padding
         # TODO: Initialize the kernel
-        if kernel_tensor == None:
+        if kernel_tensor is None:
             self.kernel = torch.randint(0, 2, (self.kernel_size, self.kernel_size))
         else:
             self.kernel = kernel_tensor
