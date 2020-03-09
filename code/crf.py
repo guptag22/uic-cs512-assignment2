@@ -35,25 +35,26 @@ class CRF(nn.Module):
         """
         self.features = nn.Parameter(self.get_conv_features(X))
 
-        prediction = blah
+        prediction = 
         return (prediction)
 
     def loss(self, X, labels):
         """
         Compute the negative conditional log-likelihood of a labelling given a sequence.
         """
-        features = self.get_conv_feats(X)
-        loss = crf_utils.obj_func(params, X, C, num_labels, embed_dim)
+        print(X.shape)
+        features = nn.Parameter(conv(X))
+        loss = crf_utils.obj_func(features, labels, params, C, num_labels, embed_dim)
         return loss
 
-    @staticmethod
-    def backward(self):
-        """
-        Return the gradient of the CRF layer
-        :return:
-        """
-        gradient = crf_utils.crfFuncGrad(params, X, C, num_labels, embed_dim)
-        return gradient
+    # @staticmethod
+    # def backward(self):
+    #     """
+    #     Return the gradient of the CRF layer
+    #     :return:
+    #     """
+    #     gradient = crf_utils.crfFuncGrad(params, X, C, num_labels, embed_dim)
+    #     return gradient
 
     def get_conv_features(self, X):
         """

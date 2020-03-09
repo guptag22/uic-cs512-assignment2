@@ -17,9 +17,9 @@ import numpy as np
 import torch
 
 
-def computeAllDotProduct(w, word):
+def computeAllDotProduct(w, data,label):
    
-	data, label = word
+	# data, label = word
 	dots = np.dot(w, data.transpose())
 
 	return dots
@@ -33,9 +33,9 @@ def logTrick(numbers):
 		M = np.max(numbers, 1)
 		return M + np.log(np.sum(np.exp((numbers.transpose() - M).transpose()), 1))
 
-def logPYX(word, w, T, alpha, dots):
+def logPYX(data,label, w, T, alpha, dots):
 
-	data, label = word
+	# data, label = word
 	m = len(label)
 	res = sum([dots[label[i], i] for i in range(m)]) + sum([T[label[i], label[i + 1]] for i in range(m - 1)])
 	logZ = logTrick(dots[:, m - 1] + alpha[m - 1, :])
@@ -43,9 +43,9 @@ def logPYX(word, w, T, alpha, dots):
 
 	return res
 
-def computeDP(word, w, T, dots):
+def computeDP(data,label, w, T, dots):
 
-	data, label = word
+	# data, label = word
 	m = len(label)
 	alpha = np.zeros((m, K))
 	for i in range(1, m):
@@ -56,6 +56,22 @@ def computeDP(word, w, T, dots):
 
 	return alpha, beta
 
+def obj_func(features, labels, params, C, num_labels, embed_dim) :
+	w = np.array(params[ : embed_dim * num_labels]).reshape(num_labels, embed_dim)
+	T = np.array(params[embed_dim * num_labels : ]).reshape(num_labels, num_labels)
+	meanLogPYX = 0
+	for data,label in zip(features,labels) :
+		dots = computeAllDotProduct(w, data,label)
+		alpha, beta = computeDP(data,label, w, T, dots)
+		meanLogPYX += logPYX(data,label, w, T, alpha, dots)
+	meanLogPYX /= len(dataset)
+
+	objValue = -C * meanLogPYX + 0.5 * np.sum(w ** 2) + 0.5 * np.sum(T ** 2)
+	print(objValue)
+	return objValue
+
+
+"""
 def computeMarginal(word, w, T, alpha, beta, dots):
 
 	data, label = word
@@ -127,17 +143,4 @@ def crfFuncGrad(params, dataset, C, num_labels, embed_dim):
 	gradients = np.concatenate((meandw.flatten(), meandT.flatten()))
 
 	return gradients
-
-def obj_func(params, dataset, C, num_labels, embed_dim) :
-	w = np.array(params[ : embed_dim * num_labels]).reshape(num_labels, embed_dim)
-	T = np.array(params[embed_dim * num_labels : ]).reshape(num_labels, num_labels)
-	meanLogPYX = 0
-	for word in dataset :
-		dots = computeAllDotProduct(w, word)
-		alpha, beta = computeDP(word, w, T, dots)
-		meanLogPYX += logPYX(word, w, T, alpha, dots)
-	meanLogPYX /= len(dataset)
-
-	objValue = -C * meanLogPYX + 0.5 * np.sum(w ** 2) + 0.5 * np.sum(T ** 2)
-	return objValue
-
+"""
