@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-
+import crf_utils
 
 class CRF(nn.Module):
 
@@ -17,22 +17,24 @@ class CRF(nn.Module):
         self.batch_size = batch_size
         self.use_cuda = torch.cuda.is_available()
 
+        """
+        Initialize trainable parameters of CRF here
+        """
+        self.params = nn.Parameter(torch.zeros(num_labels * embed_dim + num_labels**2))
+        self.w = params.narrow(0,0,num_labels * embed_dim).view(num_labels, embed_dim)
+        self.T = params.narrow(0,num_labels * embed_dim, num_labels**2).view(num_labels,num_labels)
         ### Use GPU if available
         if self.use_cuda:
             [m.cuda() for m in self.modules()]
 
-    def init_params(self):
-        """
-        Initialize trainable parameters of CRF here
-        """
-        blah
-
+    @staticmethod
     def forward(self, X):
         """
         Implement the objective of CRF here.
         The input (features) to the CRF module should be convolution features.
         """
-        features = self.get_conv_feats(X)
+        self.features = nn.Parameter(self.get_conv_features(X))
+
         prediction = blah
         return (prediction)
 
@@ -41,20 +43,23 @@ class CRF(nn.Module):
         Compute the negative conditional log-likelihood of a labelling given a sequence.
         """
         features = self.get_conv_feats(X)
-        loss = blah
+        loss = crf_utils.obj_func(params, X, C, num_labels, embed_dim)
         return loss
 
+    @staticmethod
     def backward(self):
         """
         Return the gradient of the CRF layer
         :return:
         """
-        gradient = blah
+        gradient = crf_utils.crfFuncGrad(params, X, C, num_labels, embed_dim)
         return gradient
 
     def get_conv_features(self, X):
         """
         Generate convolution features for a given word
         """
-        convfeatures = blah
+        convfeatures = 
         return convfeatures
+
+    

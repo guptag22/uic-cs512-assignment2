@@ -16,15 +16,15 @@ conv_shapes = [[1,64,128]] #
 
 # Model parameters
 input_dim = 128
-embed_dim = 64
+embed_dim = 128
 num_labels = 26
 cuda = torch.cuda.is_available()
 
 # Instantiate the CRF model
-crf = CRF(input_dim, embed_dim, conv_shapes, num_labels, batch_size)
+crf_model = CRF(input_dim, embed_dim, conv_shapes, num_labels, batch_size)
 
 # Setup the optimizer
-opt = optim.LBFGS(crf.parameters())
+opt = optim.LBFGS(crf_model.parameters())
 
 
 ##################################################
@@ -34,26 +34,27 @@ step = 0
 
 # Fetch dataset
 dataset = get_dataset()
+split = int(0.5 * len(dataset.data)) # train-test split
+train_data, test_data = dataset.data[:split], dataset.data[split:]
+train_target, test_target = dataset.target[:split], dataset.target[split:]
+
+# Convert dataset into torch tensors
+train = data_utils.TensorDataset(torch.tensor(train_data).float(), torch.tensor(train_target).long())
+test = data_utils.TensorDataset(torch.tensor(test_data).float(), torch.tensor(test_target).long())
+
+# print(len(train[0][1][0]))
 
 for i in range(num_epochs):
     print("Processing epoch {}".format(i))
-    dataset = get_dataset()
-    split = int(0.5 * len(dataset.data)) # train-test split
-    train_data, test_data = dataset.data[:split], dataset.data[split:]
-    train_target, test_target = dataset.target[:split], dataset.target[split:]
-
-    # Convert dataset into torch tensors
-    train = data_utils.TensorDataset(torch.tensor(train_data).float(), torch.tensor(train_target).long())
-    test = data_utils.TensorDataset(torch.tensor(test_data).float(), torch.tensor(test_target).long())
-
+    
     # Define train and test loaders
     train_loader = data_utils.DataLoader(train,  # dataset to load from
-                                         batch_size=batch_size,  # examples per batch (default: 1)
-                                         shuffle=True,
-                                         sampler=None,  # if a sampling method is specified, `shuffle` must be False
-                                         num_workers=5,  # subprocesses to use for sampling
-                                         pin_memory=False,  # whether to return an item pinned to GPU
-                                         )
+                                            batch_size=batch_size,  # examples per batch (default: 1)
+                                            shuffle=True,
+                                            sampler=None,  # if a sampling method is specified, `shuffle` must be False
+                                            num_workers=5,  # subprocesses to use for sampling
+                                            pin_memory=False,  # whether to return an item pinned to GPU
+                                            )
 
     test_loader = data_utils.DataLoader(test,  # dataset to load from
                                         batch_size=batch_size,  # examples per batch (default: 1)
@@ -76,7 +77,7 @@ for i in range(num_epochs):
 
         # compute loss, grads, updates:
         opt.zero_grad() # clear the gradients
-        tr_loss = crf.loss(train_X, train_Y) # Obtain the loss for the optimizer to minimize
+        tr_loss = crf_model.loss(train_X, train_Y) # Obtain the loss for the optimizer to minimize
         tr_loss.backward() # Run backward pass and accumulate gradients
         opt.step() # Perform optimization step (weight updates)
 
@@ -93,7 +94,7 @@ for i in range(num_epochs):
             if cuda:
                 test_X = test_X.cuda()
                 test_Y = test_Y.cuda()
-            test_loss = crf.loss(test_X, test_Y)
+            test_loss = crf_model.loss(test_X, test_Y)
             print(step, tr_loss.data, test_loss.data,
                        tr_loss.data / batch_size, test_loss.data / batch_size)
 
