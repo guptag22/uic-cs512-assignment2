@@ -65,7 +65,7 @@ class CRF(nn.Module):
     #     return convfeatures
 
     
-
+"""
 # import torch
 import torch.optim as optim
 import torch.utils.data as data_utils
@@ -75,7 +75,7 @@ import numpy as np
 
 
 # Tunable parameters
-batch_size = 256
+batch_size = 64
 num_epochs = 10
 max_iters  = 1000
 print_iter = 25 # Prints results every n iterations
@@ -137,5 +137,13 @@ for i_batch, sample in enumerate(train_loader):
     train_X = sample[0]
     train_Y = sample[1]
 
-    print(i_batch,len(train_X),len(train_X[0]),len(train_X[0][0]))
+    # print(i_batch,len(train_X),len(train_X[0]),len(train_X[0][0]))
     print(i_batch,len(train_Y),len(train_Y[0]),len(train_Y[0][0]))
+    # yt = train_Y[0]
+    # print("numder of letters in the word = ",torch.sum(train_Y[0]), torch.sum(train_Y[1])) 
+    # print(torch.all(train_Y[0].eq(train_Y[1])))
+    # c = (~torch.eq(train_Y[0],train_Y[1])).sum()
+    # print(c)
+    # print(train_Y[0] - train_Y[1])
+    
+"""    
