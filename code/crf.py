@@ -43,10 +43,22 @@ class CRF(nn.Module):
         """
         Compute the negative conditional log-likelihood of a labelling given a sequence.
         """
-        print(X.shape)
-        features = nn.Parameter(conv_layer(X))
+        X = self.__reshape_before_conv__(X)
+        features = nn.Parameter(self.conv_layer(X))
+        features = self.__reshape_after_conv__(features)
         loss = crf_utils.obj_func(features, labels, params, C, num_labels, embed_dim)
         return loss
+
+
+    def __reshape_before_conv__(self, X):
+        X = torch.reshape(X, (X.shape[0]*X.shape[1], 1, 16, 8))
+        return X
+
+
+    def __reshape_after_conv__(self, X):
+        X = torch.reshape(X, (X.shape[0]//14, 14, X.shape[2]*X.shape[3]))
+        return X
+
 
     # @staticmethod
     # def backward(self):
