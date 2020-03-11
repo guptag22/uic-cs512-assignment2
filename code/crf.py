@@ -36,7 +36,7 @@ class CRF(nn.Module):
         """
         features = self.conv_layer(X)
 
-        # prediction = 
+        prediction = crf_utils.dp_infer(features, params, num_labels, embed_dim)
         return (prediction)
 
     def loss(self, X, labels):      # Accepts Batches
