@@ -4,7 +4,7 @@ import numpy as np
 
 class DataLoader:
     def __init__(self):
-        data_path = '../data/letter.data.gz'
+        data_path = 'data/letter.data.gz'
         lines = self._read(data_path)
         data, target = self._parse(lines)
         self.data, self.target = self._pad(data, target)
@@ -64,3 +64,8 @@ def get_dataset():
     dataset.data = dataset.data[order]
     dataset.target = dataset.target[order]
     return dataset
+
+
+if __name__ == "__main__":
+    d = get_dataset()
+

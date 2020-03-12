@@ -46,7 +46,8 @@ class CRF(nn.Module):
         X = self.__reshape_before_conv__(X)
         features = nn.Parameter(self.conv_layer(X))
         features = self.__reshape_after_conv__(features)
-        loss = crf_utils.obj_func(features, labels, params, C, num_labels, embed_dim)
+        C = 1000
+        loss = crf_utils.obj_func(features, labels, self.params, C, self.num_labels, self.embed_dim)
         return loss
 
 

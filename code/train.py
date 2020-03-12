@@ -4,6 +4,7 @@ import torch.utils.data as data_utils
 from data_loader import get_dataset
 import numpy as np
 from crf import CRF
+import time
 
 
 # Tunable parameters
@@ -74,78 +75,85 @@ for i in range(num_epochs):
 
         train_X = sample[0]
         train_Y = sample[1]
+        print(train_Y.dtype)
 
         if cuda:
             train_X = train_X.cuda()
             train_Y = train_Y.cuda()
 
         # compute loss, grads, updates:
-        opt.zero_grad() # clear the gradients
-        tr_loss = crf_model.loss(train_X, train_Y) # Obtain the loss for the optimizer to minimize
-        tr_loss.backward() # Run backward pass and accumulate gradients
-        opt.step() # Perform optimization step (weight updates)
+        def closure() :
+            opt.zero_grad() # clear the gradients
+            tr_loss = crf_model.loss(train_X, train_Y) # Obtain the loss for the optimizer to minimize
+            for name, param in crf_model.named_parameters():
+                if param.requires_grad:
+                    print (name, param.data)
+            tr_loss.backward() # Run backward pass and accumulate gradients
+            return tr_loss
+        start = time.time()
+        opt.step(closure) # Perform optimization step (weight updates)
+        print("TIME ELAPSED = ", time.time() - start)
+        # # print to stdout occasionally:
+        # if step % print_iter == 0:
+        #     random_ixs = np.random.choice(test_data.shape[0], batch_size, replace=False)
+        #     test_X = test_data[random_ixs, :]
+        #     test_Y = test_target[random_ixs, :]
 
-        # print to stdout occasionally:
-        if step % print_iter == 0:
-            random_ixs = np.random.choice(test_data.shape[0], batch_size, replace=False)
-            test_X = test_data[random_ixs, :]
-            test_Y = test_target[random_ixs, :]
+        #     # Convert to torch
+        #     test_X = torch.from_numpy(test_X).float()
+        #     test_Y = torch.from_numpy(test_Y).long()
 
-            # Convert to torch
-            test_X = torch.from_numpy(test_X).float()
-            test_Y = torch.from_numpy(test_Y).long()
-
-            if cuda:
-                test_X = test_X.cuda()
-                test_Y = test_Y.cuda()
-            test_loss = crf_model.loss(test_X, test_Y)
-            print(step, tr_loss.data, test_loss.data,
-                       tr_loss.data / batch_size, test_loss.data / batch_size)
+        #     if cuda:
+        #         test_X = test_X.cuda()
+        #         test_Y = test_Y.cuda()
+        #     test_loss = crf_model.loss(test_X, test_Y)
+        #     print(step, tr_loss.data, test_loss.data,
+        #                tr_loss.data / len(train_X), test_loss.data / len(test_X))
         
         
 			##################################################################
 			# IMPLEMENT WORD-WISE AND LETTER-WISE ACCURACY HERE
 			##################################################################
         
-        if step < 100 :
-            random_ixs = np.random.choice(test_data.shape[0], batch_size, replace=False)
-            test_X = test_data[random_ixs, :]
-            test_Y = test_target[random_ixs, :]
+        # if step < 100 :
+        #     random_ixs = np.random.choice(test_data.shape[0], batch_size, replace=False)
+        #     test_X = test_data[random_ixs, :]
+        #     test_Y = test_target[random_ixs, :]
 
-            # Convert to torch
-            test_X = torch.from_numpy(test_X).float()
-            test_Y = torch.from_numpy(test_Y).long()
+        #     # Convert to torch
+        #     test_X = torch.from_numpy(test_X).float()
+        #     test_Y = torch.from_numpy(test_Y).long()
 
-            if cuda:
-                test_X = test_X.cuda()
-                test_Y = test_Y.cuda()
-            with torch.no_grad() :
-                train_predictions = crf_model.forward(train_X)
-                test_predictions = crf_model.forward(test_X)
-            train_word_acc = 0
-            train_letter_acc = 0
-            for y,y_predict in zip(train_Y,train_predictions) :
-                num_letters = torch.sum(y)                      ## Number of letters in the word
-                if (torch.all(torch.eq(y[:num_letters], y_predict[:num_letters]))):      ## if all letters are predicted correct
-                    train_word_acc += 1
-                train_letter_acc += num_letters - (((~torch.eq(y[:num_letters],y_predict[:num_letters])).sum()) / 2)
-            test_word_acc = 0
-            test_letter_acc = 0
-            for y,y_predict in zip(test_Y,test_predictions) :
-                num_letters = torch.sum(y)                      ## Number of letters in the word
-                if (torch.all(torch.eq(y[:num_letters], y_predict[:num_letters]))):      ## if all letters are predicted correct
-                    test_word_acc += 1
-                test_letter_acc += num_letters - (((~torch.eq(y[:num_letters],y_predict[:num_letters])).sum()) / 2)
-            letterwise_train.append(train_letter_acc)
-            letterwise_test.append(test_letter_acc)
-            wordwise_train.append(train_word_acc)
-            wordwise_test.append(test_word_acc)
-            print("Training Accuracy : ")
-            print("\tword accuracy = ",train_word_acc)
-            print("\tletter accuracy = ",train_letter_acc)
-            print("Test Accuracy : ")
-            print("\tword accuracy = ",test_word_acc)
-            print("\tletter accuracy = ",test_letter_acc)
+        #     if cuda:
+        #         test_X = test_X.cuda()
+        #         test_Y = test_Y.cuda()
+        #     with torch.no_grad() :
+        #         train_predictions = crf_model(train_X)
+        #         test_predictions = crf_model(test_X)
+        #     train_word_acc = 0
+        #     train_letter_acc = 0
+        #     for y,y_predict in zip(train_Y,train_predictions) :
+        #         num_letters = torch.sum(y)                      ## Number of letters in the word
+        #         if (torch.all(torch.eq(y[:num_letters], y_predict[:num_letters]))):      ## if all letters are predicted correct
+        #             train_word_acc += 1
+        #         train_letter_acc += num_letters - (((~torch.eq(y[:num_letters],y_predict[:num_letters])).sum()) / 2)
+        #     test_word_acc = 0
+        #     test_letter_acc = 0
+        #     for y,y_predict in zip(test_Y,test_predictions) :
+        #         num_letters = torch.sum(y)                      ## Number of letters in the word
+        #         if (torch.all(torch.eq(y[:num_letters], y_predict[:num_letters]))):      ## if all letters are predicted correct
+        #             test_word_acc += 1
+        #         test_letter_acc += num_letters - (((~torch.eq(y[:num_letters],y_predict[:num_letters])).sum()) / 2)
+        #     letterwise_train.append(train_letter_acc)
+        #     letterwise_test.append(test_letter_acc)
+        #     wordwise_train.append(train_word_acc)
+        #     wordwise_test.append(test_word_acc)
+        #     print("Training Accuracy : ")
+        #     print("\tword accuracy = ",train_word_acc)
+        #     print("\tletter accuracy = ",train_letter_acc)
+        #     print("Test Accuracy : ")
+        #     print("\tword accuracy = ",test_word_acc)
+        #     print("\tletter accuracy = ",test_letter_acc)
             
 
         step += 1

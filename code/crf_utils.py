@@ -1,74 +1,149 @@
-"""
-Author: Yeshu Li
-The Python program has been tested under macOS Mojava Version 10.14.3 and Ubuntu 18.04.
-
-The file paths are hard-coded in the code for my convenience. There are 4 features in crf.py file.
-
-1. p2a function computes the required log-likelihood and stores the required gradients in gradients.txt.
-2. p2b function computes the optimal parameter by using L-BFGS-B optimization method, outputs the final objective function value and stores the optimal parameter in solution.txt.
-3. checkGrad function checks the gradients against finite differences.
-
-
-"""
-
 # import time
 import math
-import numpy as np
 import torch
 
 
-def computeAllDotProduct(w, data,label):
-   
-	# data, label = word
-	dots = np.dot(w, data.transpose())
+def reverse_onehot(labels) :
+	mask = torch.arange(26, dtype=torch.int64)		## Number encoding of each letter
+	masked_labels = torch.zeros(len(labels), dtype=torch.int64)
+	for i in range(len(labels)):
+		# print("SHAPEEEEEES: ", mask.shape, labels[i].shape)
+		# print(torch.mm(mask,labels[i]))
+		masked_labels[i] = torch.mm(mask.reshape(1,-1),labels[i].reshape(-1,1)).item()
+	return masked_labels
 
+def onehot(masked_labels, num_labels) :
+	label_dict = torch.eye(num_labels)						## 26x26 identity matrix. Each ith row is one-hot representation of ith letter
+	print(label_dict.shape)
+	# number of letters of a word
+	m = len(masked_labels)
+	labels = torch.zeros((m, num_labels))								## SHUBHAM please review this statement
+	print(labels.shape)
+	for i in range(m):
+		labels[i] = label_dict[masked_labels[i]]
+	print(labels.shape)
+	return labels
+
+def computeAllDotProduct(w, data):
+	temp_data = torch.transpose(data, 0, 1)
+	dots = torch.mm(w, temp_data)
 	return dots
 
 def logTrick(numbers):
 
 	if len(numbers.shape) == 1:
-		M = np.max(numbers)
-		return M + np.log(np.sum(np.exp(numbers - M)))
+		M = torch.max(numbers)
+		return M + torch.log(torch.sum(torch.exp(numbers - M)))
 	else:
-		M = np.max(numbers, 1)
-		return M + np.log(np.sum(np.exp((numbers.transpose() - M).transpose()), 1))
+		M = torch.max(numbers, 1).values
+		temp = torch.transpose(numbers, 0, 1) - M
+		return M + torch.log(torch.sum(torch.exp(torch.transpose(temp, 0, 1)), 1))
 
-def logPYX(data,label, w, T, alpha, dots):
-
-	# data, label = word
-	m = len(label)
-	res = sum([dots[label[i], i] for i in range(m)]) + sum([T[label[i], label[i + 1]] for i in range(m - 1)])
+def logPYX(label, w, T, alpha, dots):
+	masked_label = reverse_onehot(label)
+	m = len(masked_label)
+	res = sum([dots[masked_label[i], i] for i in range(m)]) + sum([T[masked_label[i], masked_label[i + 1]] for i in range(m - 1)])
 	logZ = logTrick(dots[:, m - 1] + alpha[m - 1, :])
 	res -= logZ
 
 	return res
 
-def computeDP(data,label, w, T, dots):
+def computeDP(label, w, T, dots, num_labels):
 
-	# data, label = word
-	m = len(label)
-	alpha = np.zeros((m, K))
+	m = len(label)			## number of letters in the word
+	alpha = torch.zeros((m, num_labels), dtype=torch.float)
 	for i in range(1, m):
-		alpha[i] = logTrick(np.tile(dots[:, i - 1] + alpha[i - 1, :], (K, 1)) + T.transpose())
-	beta = np.zeros((m, K))
+		alpha_one = dots[:, i - 1] + alpha[i - 1, :]
+		alpha_one = alpha_one.repeat(num_labels, 1) + torch.transpose(T, 0, 1)
+		alpha[i] = logTrick(alpha_one)
+	beta = torch.zeros((m, num_labels))
 	for i in range(m - 2, -1, -1):
-		beta[i] = logTrick(np.tile(dots[:, i + 1] + beta[i + 1, :], (K, 1)) + T)
+		beta_one = dots[:, i + 1] + beta[i + 1, :]
+		beta_one = beta_one.repeat(num_labels, 1) + T
+		beta[i] = logTrick(beta_one)
 
 	return alpha, beta
 
 def obj_func(features, labels, params, C, num_labels, embed_dim) :
-	w = np.array(params[ : embed_dim * num_labels]).reshape(num_labels, embed_dim)
-	T = np.array(params[embed_dim * num_labels : ]).reshape(num_labels, num_labels)
+	w = torch.tensor(params[ : embed_dim * num_labels]).reshape(num_labels, embed_dim)
+	T = torch.tensor(params[embed_dim * num_labels : ]).reshape(num_labels, num_labels)
 	meanLogPYX = 0
 	for data,label in zip(features,labels) :
-		dots = computeAllDotProduct(w, data,label)
-		alpha, beta = computeDP(data,label, w, T, dots)
-		meanLogPYX += logPYX(data,label, w, T, alpha, dots)
-	meanLogPYX /= len(dataset)
+		dots = computeAllDotProduct(w, data)
+		alpha, beta = computeDP(label, w, T, dots, num_labels)
+		meanLogPYX += logPYX(label, w, T, alpha, dots)
+	meanLogPYX /= len(features)
 
-	objValue = -C * meanLogPYX + 0.5 * np.sum(w ** 2) + 0.5 * np.sum(T ** 2)
+	objValue = -C * meanLogPYX + 0.5 * torch.sum(w ** 2) + 0.5 * torch.sum(T ** 2)
 	print(objValue)
 	return objValue
+
+def dp_infer(features, params, num_labels, embed_dim):
+	w = torch.tensor(params[ : embed_dim * num_labels]).reshape(num_labels, embed_dim)
+	T = torch.tensor(params[embed_dim * num_labels : ]).reshape(num_labels, num_labels)
+	
+	batch_size = len(features)
+	results = torch.empty(batch_size, len(features[0]), num_labels)
+	for i_word, x in enumerate(features) :
+		m = len(x)					## number of letters in word x
+		pos_letter_value_table = torch.zeros((m, num_labels), dtype=np.float64)
+		pos_best_prevletter_table = torch.zeros((m, num_labels), dtype=np.int)
+
+		# for the position 1 (1st letter), special handling
+		# because only w and x dot product is covered and transition is not considered.
+		for i in range(num_labels):
+			# print(w)
+			# print(x)
+			pos_letter_value_table[0, i] = torch.mm(w[i, :], x[0, :])
+
+		# pos_best_prevletter_table first row is all zero as there is no previous letter for the first letter
+
+		# start from 2nd position
+		for pos in range(1, m):
+			# go over all possible letters
+			for letter_ind in range(num_labels):
+				# get the previous letter scores
+				prev_letter_scores = (pos_letter_value_table[pos-1, :]).clone()
+				# we need to calculate scores of combining the current letter and all previous letters
+				# no need to calculate the dot product because dot product only covers current letter and position
+				# which means it is independent of all previous letters
+				for prev_letter_ind in range(num_labels):
+					prev_letter_scores[prev_letter_ind] += T[prev_letter_ind, letter_ind]
+
+				# find out which previous letter achieved the largest score by now
+				best_letter_ind = np.argmax(prev_letter_scores)
+				# update the score of current positive with current letter
+				pos_letter_value_table[pos, letter_ind] = prev_letter_scores[best_letter_ind] + np.dot(w[letter_ind,:], x[pos, :])
+				# save the best previous letter for following tracking to generate most possible word
+				pos_best_prevletter_table[pos, letter_ind] = best_letter_ind
+		letter_indicies = np.zeros((m, 1), dtype=np.int)
+		letter_indicies[m-1, 0] = np.argmax(pos_letter_value_table[m-1, :])
+		max_obj_val = pos_letter_value_table[m-1, letter_indicies[m-1, 0]]
+		# print(max_obj_val)
+		for pos in range(m-2, -1, -1):
+			letter_indicies[pos, 0] = pos_best_prevletter_table[pos+1, letter_indicies[pos+1, 0]]
+		## TODO : collect letter indices for the batch and return the batch
+		# One-hot encode targets.
+		word_predict = onehot(letter_indicies, num_labels)
+		results[i_word] = word_predict							## SHUBHAM please review this statement
+	
+	return results
+		# target = np.zeros(dataset.target.shape + (26,))
+		# for index, letter in np.ndenumerate(results):
+		# 	if letter:
+		# 		target[index][ord(letter) - ord('a')] = 1
+		# results = target
+
+if __name__ == "__main__":
+	# print(onehot([0, 7], 26))
+	labels = torch.tensor([[1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.], [0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]])
+	print(labels.shape)
+	print(reverse_onehot(labels))
+	# a = torch.tensor([1, 0, 3])
+	# b = torch.tensor([1, 2, 4])
+	# print(a.shape, b.shape)
+	# c = torch.mm(a.reshape(1,-1), b.reshape(-1,1))
+	# print(c.item())
 
 
 """
