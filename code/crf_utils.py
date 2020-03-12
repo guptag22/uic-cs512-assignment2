@@ -13,15 +13,15 @@ def reverse_onehot(labels) :
 	return masked_labels
 
 def onehot(masked_labels, num_labels) :
-	label_dict = torch.eye(num_labels)						## 26x26 identity matrix. Each ith row is one-hot representation of ith letter
-	print(label_dict.shape)
+	label_dict = torch.eye(num_labels, dtype=torch.int)						## 26x26 identity matrix. Each ith row is one-hot representation of ith letter
+	# print(label_dict.shape)
 	# number of letters of a word
 	m = len(masked_labels)
-	labels = torch.zeros((m, num_labels))								## SHUBHAM please review this statement
-	print(labels.shape)
+	labels = torch.zeros((m, num_labels))
+	# print(labels.shape)
 	for i in range(m):
 		labels[i] = label_dict[masked_labels[i]]
-	print(labels.shape)
+	# print(labels.shape)
 	return labels
 
 def computeAllDotProduct(w, data):
@@ -86,15 +86,16 @@ def dp_infer(features, params, num_labels, embed_dim):
 	results = torch.empty(batch_size, len(features[0]), num_labels)
 	for i_word, x in enumerate(features) :
 		m = len(x)					## number of letters in word x
-		pos_letter_value_table = torch.zeros((m, num_labels), dtype=np.float64)
-		pos_best_prevletter_table = torch.zeros((m, num_labels), dtype=np.int)
+		pos_letter_value_table = torch.zeros((m, num_labels), dtype=torch.float64)
+		pos_best_prevletter_table = torch.zeros((m, num_labels), dtype=torch.int)
 
 		# for the position 1 (1st letter), special handling
 		# because only w and x dot product is covered and transition is not considered.
 		for i in range(num_labels):
 			# print(w)
 			# print(x)
-			pos_letter_value_table[0, i] = torch.mm(w[i, :], x[0, :])
+			# print(w[i, :].reshape(1,-1).shape,x[0, :].reshape(-1,1).shape)
+			pos_letter_value_table[0, i] = torch.mm(w[i, :].reshape(1,-1), x[0, :].reshape(-1,1))
 
 		# pos_best_prevletter_table first row is all zero as there is no previous letter for the first letter
 
@@ -111,13 +112,13 @@ def dp_infer(features, params, num_labels, embed_dim):
 					prev_letter_scores[prev_letter_ind] += T[prev_letter_ind, letter_ind]
 
 				# find out which previous letter achieved the largest score by now
-				best_letter_ind = np.argmax(prev_letter_scores)
+				best_letter_ind = torch.argmax(prev_letter_scores)
 				# update the score of current positive with current letter
-				pos_letter_value_table[pos, letter_ind] = prev_letter_scores[best_letter_ind] + np.dot(w[letter_ind,:], x[pos, :])
+				pos_letter_value_table[pos, letter_ind] = prev_letter_scores[best_letter_ind] + torch.mm(w[letter_ind,:].reshape(1,-1), x[pos, :].reshape(-1,1))
 				# save the best previous letter for following tracking to generate most possible word
 				pos_best_prevletter_table[pos, letter_ind] = best_letter_ind
-		letter_indicies = np.zeros((m, 1), dtype=np.int)
-		letter_indicies[m-1, 0] = np.argmax(pos_letter_value_table[m-1, :])
+		letter_indicies = torch.zeros((m, 1), dtype=torch.long)
+		letter_indicies[m-1, 0] = torch.argmax(pos_letter_value_table[m-1, :])
 		max_obj_val = pos_letter_value_table[m-1, letter_indicies[m-1, 0]]
 		# print(max_obj_val)
 		for pos in range(m-2, -1, -1):

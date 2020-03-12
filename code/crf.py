@@ -28,15 +28,16 @@ class CRF(nn.Module):
         if self.use_cuda:
             [m.cuda() for m in self.modules()]
 
-    @staticmethod
     def forward(self, X):
         """
         Implement the objective of CRF here.
         The input (features) to the CRF module should be convolution features.
         """
-        features = self.conv_layer(X)
+        X = self.__reshape_before_conv__(X)
+        features = nn.Parameter(self.conv_layer(X))
+        features = self.__reshape_after_conv__(features)
 
-        prediction = crf_utils.dp_infer(features, params, num_labels, embed_dim)
+        prediction = crf_utils.dp_infer(features, self.params, self.num_labels, self.embed_dim)
         return (prediction)
 
     def loss(self, X, labels):      # Accepts Batches
