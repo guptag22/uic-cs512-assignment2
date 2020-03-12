@@ -65,8 +65,8 @@ def computeDP(label, w, T, dots, num_labels):
 	return alpha, beta
 
 def obj_func(features, labels, params, C, num_labels, embed_dim) :
-	w = torch.tensor(params[ : embed_dim * num_labels]).reshape(num_labels, embed_dim)
-	T = torch.tensor(params[embed_dim * num_labels : ]).reshape(num_labels, num_labels)
+	w = (params[ : embed_dim * num_labels]).reshape(num_labels, embed_dim).clone()
+	T = (params[embed_dim * num_labels : ]).reshape(num_labels, num_labels).clone()
 	meanLogPYX = 0
 	for data,label in zip(features,labels) :
 		dots = computeAllDotProduct(w, data)
@@ -79,8 +79,8 @@ def obj_func(features, labels, params, C, num_labels, embed_dim) :
 	return objValue
 
 def dp_infer(features, params, num_labels, embed_dim):
-	w = torch.tensor(params[ : embed_dim * num_labels]).reshape(num_labels, embed_dim)
-	T = torch.tensor(params[embed_dim * num_labels : ]).reshape(num_labels, num_labels)
+	w = (params[ : embed_dim * num_labels]).reshape(num_labels, embed_dim).clone()
+	T = (params[embed_dim * num_labels : ]).reshape(num_labels, num_labels).clone()
 	
 	batch_size = len(features)
 	results = torch.empty(batch_size, len(features[0]), num_labels)
