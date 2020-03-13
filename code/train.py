@@ -1,14 +1,16 @@
+import time
 import torch
 import torch.optim as optim
 import torch.utils.data as data_utils
+
 from data_loader import get_dataset
+import matplotlib.pyplot as plt
 import numpy as np
 from crf import CRF
-import time
 
 
 # Tunable parameters
-batch_size = 256
+batch_size = 64
 num_epochs = 10
 max_iters  = 1000
 print_iter = 25 # Prints results every n iterations
@@ -48,7 +50,7 @@ letterwise_train = []
 letterwise_test = []
 wordwise_train = []
 wordwise_test = []
-            
+         
 for i in range(num_epochs):
     print("\n--------------Starting Epoch {}-------------------".format(i))
     start_epoch = time.time()
@@ -157,6 +159,26 @@ for i in range(num_epochs):
         if step > max_iters: raise StopIteration
     print("Epoch completed Epoch-{} Batch-{} Step-{} TIME ELAPSED = {}".format(i,i_batch,step-1,time.time() - start_epoch))
 
+print("\nTraining Accuracy : ")
+print("\tword accuracy = ",wordwise_train)
+print("\tletter accuracy = ",letterwise_train)
+print("Test Accuracy : ")
+print("\tword accuracy = ",wordwise_test)
+print("\tletter accuracy = ",letterwise_test)
+x = np.arange(1,101)
+fig, (ax1, ax2) = plt.subplots(1,2)
+ax1.plot(x,letterwise_train, label = "Batch Training Accuracy")
+ax1.plot(x,letterwise_test, label = "Batch Test Accuracy")
+ax1.set_title("Letterwise Accuracy")
+ax1.set_xlabel("Batches")
+ax1.set_ylabel("Accuracy")
+ax2.plot(x,wordwise_train, label = "Batch Training Accuracy")
+ax2.plot(x,wordwise_test, label = "Batch Test Accuracy")
+ax2.set_title("Wordwise Accuracy")
+ax2.set_xlabel("Batches")
+ax2.set_ylabel("Accuracy")
+plt.show()
+            
 ### TODO : plot letterwise accuracy for training and test using letterwise_train and letterwise_test
 
 ### TODO : plot wordwise accuracy for training and test using wordwise_train and wordwise_test
