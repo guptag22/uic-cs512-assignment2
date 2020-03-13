@@ -25,8 +25,7 @@ def onehot(masked_labels, num_labels) :
 	return labels
 
 def computeAllDotProduct(w, data):
-	temp_data = torch.transpose(data, 0, 1)
-	dots = torch.mm(w, temp_data)
+	dots = torch.mm(w, torch.transpose(data, 0, 1))
 	return dots
 
 def logTrick(numbers):
@@ -48,9 +47,8 @@ def logPYX(label, w, T, alpha, dots):
 
 	return res
 
-def computeDP(label, w, T, dots, num_labels):
+def computeDP(m, w, T, dots, num_labels):
 
-	m = len(label)			## number of letters in the word
 	alpha = torch.zeros((m, num_labels), dtype=torch.float)
 	for i in range(1, m):
 		alpha_one = dots[:, i - 1] + alpha[i - 1, :]
@@ -69,8 +67,9 @@ def obj_func(features, labels, params, C, num_labels, embed_dim) :
 	T = (params[embed_dim * num_labels : ]).reshape(num_labels, num_labels).clone()
 	meanLogPYX = 0
 	for data,label in zip(features,labels) :
+		m = len(label)
 		dots = computeAllDotProduct(w, data)
-		alpha, beta = computeDP(label, w, T, dots, num_labels)
+		alpha, beta = computeDP(m, w, T, dots, num_labels)
 		meanLogPYX += logPYX(label, w, T, alpha, dots)
 	meanLogPYX /= len(features)
 
@@ -126,7 +125,7 @@ def dp_infer(features, params, num_labels, embed_dim):
 		## TODO : collect letter indices for the batch and return the batch
 		# One-hot encode targets.
 		word_predict = onehot(letter_indicies, num_labels)
-		results[i_word] = word_predict							## SHUBHAM please review this statement
+		results[i_word] = word_predict
 	
 	return results
 		# target = np.zeros(dataset.target.shape + (26,))
@@ -147,68 +146,71 @@ if __name__ == "__main__":
 	# print(c.item())
 
 
-"""
-def computeMarginal(word, w, T, alpha, beta, dots):
 
-	data, label = word
-	m = len(label)
-	p1 = np.zeros((m, K))
+def computeMarginal(m, w, T, alpha, beta, dots, num_labels):
+
+	p1 = torch.zeros((m, num_labels))
 	for i in range(m):
 		p1[i] = alpha[i, :] + beta[i, :] + dots[:, i]
-		p1[i] = np.exp(p1[i] - logTrick(p1[i]))
-	p2 = np.zeros((m - 1, K, K))
+		p1[i] = torch.exp(p1[i] - logTrick(p1[i]))
+	p2 = torch.zeros((m - 1, num_labels, num_labels))
 	for i in range(m - 1):
-		p2[i] = np.tile(alpha[i, :] + dots[:, i], (K, 1)).transpose() + np.tile(beta[i + 1, :] + dots[:, i + 1], (K, 1)) + T
-		p2[i] = np.exp(p2[i] - logTrick(p2[i].flatten()))
+		a = alpha[i, :] + dots[:, i]
+		a = a.repeat((num_labels, 1))
+		a = torch.transpose(a, 0, 1)
+
+		b = beta[i + 1, :] + dots[:, i + 1]
+		b = b.repeat(num_labels, 1)
+		p2[i] = a + b + T	### TODO
+		p2[i] = torch.exp(p2[i] - logTrick(p2[i].flatten()))
 
 	return p1, p2
 
-def computeGradientWy(word, p1):
+def computeGradientWy(data, label, p1, num_labels):
 
-	data, label = word
 	m = len(label)
-	cof = np.zeros((K, m))
+	cof = torch.zeros((num_labels, m))
 	for i in range(m):
 		cof[label[i], i] = 1
-	cof -= p1.transpose()
-	res = np.dot(cof, data)
+	cof -= torch.transpose(p1)
+	res = torch.mm(cof, data)
 
 	return res
 
-def computeGradientTij(word, p2):
+def computeGradientTij(label, p2):
 
-	data, label = word
 	m = len(label)
-	res = np.zeros(p2.shape)
+	res = torch.zeros(p2.shape)
 	for i in range(m - 1):
 		res[i, label[i], label[i + 1]] = 1
 	res -= p2
-	res = np.sum(res, 0)
+	res = torch.sum(res, 0)
    
 	return res
 
-def crfFuncGrad(params, dataset, C, num_labels, embed_dim):
+def crfFuncGrad(features, labels, params, C, num_labels, embed_dim):
 
-	w = np.array(params[ : embed_dim * num_labels]).reshape(num_labels, embed_dim)
-	T = np.array(params[embed_dim * num_labels : ]).reshape(num_labels, num_labels)
+	w = (params[ : embed_dim * num_labels]).reshape(num_labels, embed_dim).clone()
+	T = (params[embed_dim * num_labels : ]).reshape(num_labels, num_labels).clone()
+	
+	meandw = torch.zeros((num_labels, embed_dim))
+	meandT = torch.zeros((num_labels, num_labels))
 
-	meandw = np.zeros((num_labels, embed_dim))
-	meandT = np.zeros((num_labels, num_labels))
+	for word, label in zip(features, labels):
 
-	for word in dataset:
-
+		m = len(word)
 		dots = computeAllDotProduct(w, word)
-		alpha, beta = computeDP(word, w, T, dots)
-		p1, p2 = computeMarginal(word, w, T, alpha, beta, dots)
+		alpha, beta = computeDP(m, w, T, dots, num_labels)
+		p1, p2 = computeMarginal(m, w, T, alpha, beta, dots, num_labels)
 
-		dw = computeGradientWy(word, p1)
-		dT = computeGradientTij(word, p2)
+		dw = computeGradientWy(word, label, p1, num_labels)
+		dT = computeGradientTij(label, p2)
 
 		meandw += dw
 		meandT += dT
 
-	meandw /= len(dataset)
-	meandT /= len(dataset)
+	meandw /= len(features)
+	meandT /= len(features)
 
 	meandw *= (-C)
 	meandT *= (-C)
@@ -216,7 +218,6 @@ def crfFuncGrad(params, dataset, C, num_labels, embed_dim):
 	meandw += w
 	meandT += T
 
-	gradients = np.concatenate((meandw.flatten(), meandT.flatten()))
+	gradients = torch.cat((meandw.flatten(), meandT.flatten()))
 
 	return gradients
-"""
