@@ -2,10 +2,12 @@
 import math
 import torch
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
 def reverse_onehot(labels) :
-	mask = torch.arange(26, dtype=torch.int64)		## Number encoding of each letter
-	masked_labels = torch.zeros(len(labels), dtype=torch.int64)
+	mask = torch.arange(26, dtype=torch.int64).to(device)		## Number encoding of each letter
+	masked_labels = torch.zeros(len(labels), dtype=torch.int64).to(device)
 	for i in range(len(labels)):
 		# print("SHAPEEEEEES: ", mask.shape, labels[i].shape)
 		# print(torch.mm(mask,labels[i]))
@@ -13,11 +15,11 @@ def reverse_onehot(labels) :
 	return masked_labels
 
 def onehot(masked_labels, num_labels) :
-	label_dict = torch.eye(num_labels, dtype=torch.int)						## 26x26 identity matrix. Each ith row is one-hot representation of ith letter
+	label_dict = torch.eye(num_labels, dtype=torch.int).to(device)						## 26x26 identity matrix. Each ith row is one-hot representation of ith letter
 	# print(label_dict.shape)
 	# number of letters of a word
 	m = len(masked_labels)
-	labels = torch.zeros((m, num_labels))
+	labels = torch.zeros((m, num_labels)).to(device)
 	# print(labels.shape)
 	for i in range(m):
 		labels[i] = label_dict[masked_labels[i]]
@@ -25,13 +27,13 @@ def onehot(masked_labels, num_labels) :
 	return labels
 
 def computeAllDotProduct(w, data):
-	dots = torch.mm(w, torch.transpose(data, 0, 1))
+	dots = torch.mm(w, torch.transpose(data, 0, 1)).to(device)
 	return dots
 
 def logTrick(numbers):
 
 	if len(numbers.shape) == 1:
-		M = torch.max(numbers)
+		M = torch.max(numbers).to(device)
 		return M + torch.log(torch.sum(torch.exp(numbers - M)))
 	else:
 		M = torch.max(numbers, 1).values
@@ -49,12 +51,12 @@ def logPYX(label, w, T, alpha, dots):
 
 def computeDP(m, w, T, dots, num_labels):
 
-	alpha = torch.zeros((m, num_labels), dtype=torch.float)
+	alpha = torch.zeros((m, num_labels), dtype=torch.float).to(device)
 	for i in range(1, m):
 		alpha_one = dots[:, i - 1] + alpha[i - 1, :]
 		alpha_one = alpha_one.repeat(num_labels, 1) + torch.transpose(T, 0, 1)
 		alpha[i] = logTrick(alpha_one)
-	beta = torch.zeros((m, num_labels))
+	beta = torch.zeros((m, num_labels)).to(device)
 	for i in range(m - 2, -1, -1):
 		beta_one = dots[:, i + 1] + beta[i + 1, :]
 		beta_one = beta_one.repeat(num_labels, 1) + T
@@ -63,8 +65,8 @@ def computeDP(m, w, T, dots, num_labels):
 	return alpha, beta
 
 def obj_func(features, labels, params, C, num_labels, embed_dim) :
-	w = (params[ : embed_dim * num_labels]).reshape(num_labels, embed_dim).clone()
-	T = (params[embed_dim * num_labels : ]).reshape(num_labels, num_labels).clone()
+	w = (params[ : embed_dim * num_labels]).reshape(num_labels, embed_dim).clone().to(device)
+	T = (params[embed_dim * num_labels : ]).reshape(num_labels, num_labels).clone().to(device)
 	meanLogPYX = 0
 	for data,label in zip(features,labels) :
 		m = len(label)
@@ -78,15 +80,15 @@ def obj_func(features, labels, params, C, num_labels, embed_dim) :
 	return objValue
 
 def dp_infer(features, params, num_labels, embed_dim):
-	w = (params[ : embed_dim * num_labels]).reshape(num_labels, embed_dim).clone()
-	T = (params[embed_dim * num_labels : ]).reshape(num_labels, num_labels).clone()
+	w = (params[ : embed_dim * num_labels]).reshape(num_labels, embed_dim).clone().to(device)
+	T = (params[embed_dim * num_labels : ]).reshape(num_labels, num_labels).clone().to(device)
 	
 	batch_size = len(features)
-	results = torch.empty(batch_size, len(features[0]), num_labels)
+	results = torch.empty(batch_size, len(features[0]), num_labels).to(device)
 	for i_word, x in enumerate(features) :
 		m = len(x)					## number of letters in word x
-		pos_letter_value_table = torch.zeros((m, num_labels), dtype=torch.float64)
-		pos_best_prevletter_table = torch.zeros((m, num_labels), dtype=torch.int)
+		pos_letter_value_table = torch.zeros((m, num_labels), dtype=torch.float64).to(device)
+		pos_best_prevletter_table = torch.zeros((m, num_labels), dtype=torch.int).to(device)
 
 		# for the position 1 (1st letter), special handling
 		# because only w and x dot product is covered and transition is not considered.
@@ -103,7 +105,7 @@ def dp_infer(features, params, num_labels, embed_dim):
 			# go over all possible letters
 			for letter_ind in range(num_labels):
 				# get the previous letter scores
-				prev_letter_scores = (pos_letter_value_table[pos-1, :]).clone()
+				prev_letter_scores = (pos_letter_value_table[pos-1, :]).clone().to(device)
 				# we need to calculate scores of combining the current letter and all previous letters
 				# no need to calculate the dot product because dot product only covers current letter and position
 				# which means it is independent of all previous letters
@@ -111,12 +113,12 @@ def dp_infer(features, params, num_labels, embed_dim):
 					prev_letter_scores[prev_letter_ind] += T[prev_letter_ind, letter_ind]
 
 				# find out which previous letter achieved the largest score by now
-				best_letter_ind = torch.argmax(prev_letter_scores)
+				best_letter_ind = torch.argmax(prev_letter_scores).to(device)
 				# update the score of current positive with current letter
 				pos_letter_value_table[pos, letter_ind] = prev_letter_scores[best_letter_ind] + torch.mm(w[letter_ind,:].reshape(1,-1), x[pos, :].reshape(-1,1))
 				# save the best previous letter for following tracking to generate most possible word
 				pos_best_prevletter_table[pos, letter_ind] = best_letter_ind
-		letter_indicies = torch.zeros((m, 1), dtype=torch.long)
+		letter_indicies = torch.zeros((m, 1), dtype=torch.long).to(device)
 		letter_indicies[m-1, 0] = torch.argmax(pos_letter_value_table[m-1, :])
 		max_obj_val = pos_letter_value_table[m-1, letter_indicies[m-1, 0]]
 		# print(max_obj_val)
@@ -136,7 +138,7 @@ def dp_infer(features, params, num_labels, embed_dim):
 
 if __name__ == "__main__":
 	# print(onehot([0, 7], 26))
-	labels = torch.tensor([[1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.], [0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]])
+	labels = torch.tensor([[1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.], [0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]]).to(device)
 	print(labels.shape)
 	print(reverse_onehot(labels))
 	# a = torch.tensor([1, 0, 3])
@@ -149,11 +151,11 @@ if __name__ == "__main__":
 
 def computeMarginal(m, w, T, alpha, beta, dots, num_labels):
 
-	p1 = torch.zeros((m, num_labels))
+	p1 = torch.zeros((m, num_labels)).to(device)
 	for i in range(m):
 		p1[i] = alpha[i, :] + beta[i, :] + dots[:, i]
 		p1[i] = torch.exp(p1[i] - logTrick(p1[i]))
-	p2 = torch.zeros((m - 1, num_labels, num_labels))
+	p2 = torch.zeros((m - 1, num_labels, num_labels)).to(device)
 	for i in range(m - 1):
 		a = alpha[i, :] + dots[:, i]
 		a = a.repeat((num_labels, 1))
@@ -169,7 +171,7 @@ def computeMarginal(m, w, T, alpha, beta, dots, num_labels):
 def computeGradientWy(data, label, p1, num_labels):
 
 	m = len(label)
-	cof = torch.zeros((num_labels, m))
+	cof = torch.zeros((num_labels, m)).to(device)
 	for i in range(m):
 		cof[label[i], i] = 1
 	cof -= torch.transpose(p1)
@@ -180,7 +182,7 @@ def computeGradientWy(data, label, p1, num_labels):
 def computeGradientTij(label, p2):
 
 	m = len(label)
-	res = torch.zeros(p2.shape)
+	res = torch.zeros(p2.shape).to(device)
 	for i in range(m - 1):
 		res[i, label[i], label[i + 1]] = 1
 	res -= p2
@@ -190,11 +192,11 @@ def computeGradientTij(label, p2):
 
 def crfFuncGrad(features, labels, params, C, num_labels, embed_dim):
 
-	w = (params[ : embed_dim * num_labels]).reshape(num_labels, embed_dim).clone()
-	T = (params[embed_dim * num_labels : ]).reshape(num_labels, num_labels).clone()
+	w = (params[ : embed_dim * num_labels]).reshape(num_labels, embed_dim).clone().to(device)
+	T = (params[embed_dim * num_labels : ]).reshape(num_labels, num_labels).clone().to(device)
 	
-	meandw = torch.zeros((num_labels, embed_dim))
-	meandT = torch.zeros((num_labels, num_labels))
+	meandw = torch.zeros((num_labels, embed_dim)).to(device)
+	meandT = torch.zeros((num_labels, num_labels)).to(device)
 
 	for word, label in zip(features, labels):
 
