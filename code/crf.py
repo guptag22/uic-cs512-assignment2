@@ -47,8 +47,9 @@ class CRF(nn.Module):
         X = self.__reshape_before_conv__(X)
         self.features = self.conv_layer(X)
         self.features = self.__reshape_after_conv__(self.features)
-        self.C = 1000
-        loss = crf_utils.obj_func(self.features, labels, self.params, self.C, self.num_labels, self.embed_dim)
+        C = 1000
+        self.saved_for_backward = [labels, C]
+        loss = crf_utils.obj_func(self.features, labels, self.params, C, self.num_labels, self.embed_dim)
         return loss
 
     def __reshape_before_conv__(self, X):
@@ -59,12 +60,12 @@ class CRF(nn.Module):
         X = torch.reshape(X, (X.shape[0]//14, 14, X.shape[2]*X.shape[3]))
         return X
 
-    # def backward(self, labels):
-    #     """
-    #     Return the gradient of the CRF layer
-    #     :return:
-    #     """
-    #     features = self.features
-    #     C = self.C
-    #     gradient = crf_utils.crfFuncGrad(features, labels, params, C, self.num_labels, self.embed_dim)
-    #     return gradient
+    def backward(self):
+        """
+        Return the gradient of the CRF layer
+        :return:
+        """
+        features = self.features
+        labels, C = self.saved_for_backward
+        gradient = crf_utils.crfFuncGrad(features, labels, params, C, self.num_labels, self.embed_dim)
+        return gradient

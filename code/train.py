@@ -96,27 +96,10 @@ for i in range(num_epochs):
         for name, param in crf_model.named_parameters():
             if param.requires_grad:
                 print ("Params after OPT step ",name, param.data)
-        # # print to stdout occasionally:
-        # if step % print_iter == 0:
-        #     random_ixs = np.random.choice(test_data.shape[0], batch_size, replace=False)
-        #     test_X = test_data[random_ixs, :]
-        #     test_Y = test_target[random_ixs, :]
-
-        #     # Convert to torch
-        #     test_X = torch.from_numpy(test_X).float()
-        #     test_Y = torch.from_numpy(test_Y).long()
-
-        #     if cuda:
-        #         test_X = test_X.cuda()
-        #         test_Y = test_Y.cuda()
-        #     test_loss = crf_model.loss(test_X, test_Y)
-        #     print(step, tr_loss.data, test_loss.data,
-        #                tr_loss.data / len(train_X), test_loss.data / len(test_X))
         
-        
-			##################################################################
-			# IMPLEMENT WORD-WISE AND LETTER-WISE ACCURACY HERE
-			##################################################################
+        ##################################################################
+        # IMPLEMENT WORD-WISE AND LETTER-WISE ACCURACY HERE
+        ##################################################################
         print("Starting Accuracy Calculation ....")
         if step < 100 :
             random_ixs = np.random.choice(test_data.shape[0], batch_size, replace=False)
