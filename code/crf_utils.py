@@ -6,8 +6,8 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def reverse_onehot(labels) :
-	mask = torch.arange(26, dtype=torch.int64).to(device)		## Number encoding of each letter
-	masked_labels = torch.zeros(len(labels), dtype=torch.int64).to(device)
+	mask = torch.arange(26, dtype=torch.float).to(device)		## Number encoding of each letter
+	masked_labels = torch.zeros(len(labels), dtype=torch.float).to(device)
 	for i in range(len(labels)):
 		# print("SHAPEEEEEES: ", mask.shape, labels[i].shape)
 		# print(torch.mm(mask,labels[i]))
@@ -15,7 +15,7 @@ def reverse_onehot(labels) :
 	return masked_labels
 
 def onehot(masked_labels, num_labels) :
-	label_dict = torch.eye(num_labels, dtype=torch.int).to(device)						## 26x26 identity matrix. Each ith row is one-hot representation of ith letter
+	label_dict = torch.eye(num_labels, dtype=torch.float).to(device)						## 26x26 identity matrix. Each ith row is one-hot representation of ith letter
 	# print(label_dict.shape)
 	# number of letters of a word
 	m = len(masked_labels)
@@ -40,10 +40,14 @@ def logTrick(numbers):
 		temp = torch.transpose(numbers, 0, 1) - M
 		return M + torch.log(torch.sum(torch.exp(torch.transpose(temp, 0, 1)), 1))
 
+def get_index(t, i):
+	return(int(t[i].item()))
+
+
 def logPYX(label, w, T, alpha, dots):
 	masked_label = reverse_onehot(label)
 	m = len(masked_label)
-	res = sum([dots[masked_label[i], i] for i in range(m)]) + sum([T[masked_label[i], masked_label[i + 1]] for i in range(m - 1)])
+	res = sum([dots[get_index(masked_label, i), i] for i in range(m)]) + sum([T[get_index(masked_label,i), get_index(masked_label,i + 1)] for i in range(m - 1)])
 	logZ = logTrick(dots[:, m - 1] + alpha[m - 1, :])
 	res -= logZ
 
@@ -69,6 +73,7 @@ def obj_func(features, labels, params, C, num_labels, embed_dim) :
 	T = (params[embed_dim * num_labels : ]).reshape(num_labels, num_labels).clone().to(device)
 	meanLogPYX = 0
 	for data,label in zip(features,labels) :
+		data, label = data.to(device), label.to(device)
 		m = len(label)
 		dots = computeAllDotProduct(w, data)
 		alpha, beta = computeDP(m, w, T, dots, num_labels)
@@ -86,6 +91,7 @@ def dp_infer(features, params, num_labels, embed_dim):
 	batch_size = len(features)
 	results = torch.empty(batch_size, len(features[0]), num_labels).to(device)
 	for i_word, x in enumerate(features) :
+		x = x.to(device)
 		m = len(x)					## number of letters in word x
 		pos_letter_value_table = torch.zeros((m, num_labels), dtype=torch.float64).to(device)
 		pos_best_prevletter_table = torch.zeros((m, num_labels), dtype=torch.int).to(device)

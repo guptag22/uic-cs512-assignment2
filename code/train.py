@@ -42,8 +42,8 @@ train_data, test_data = dataset.data[:split], dataset.data[split:]
 train_target, test_target = dataset.target[:split], dataset.target[split:]
 
 # Convert dataset into torch tensors
-train = data_utils.TensorDataset(torch.tensor(train_data).float(), torch.tensor(train_target).long())
-test = data_utils.TensorDataset(torch.tensor(test_data).float(), torch.tensor(test_target).long())
+train = data_utils.TensorDataset(torch.tensor(train_data).float(), torch.tensor(train_target).float())
+test = data_utils.TensorDataset(torch.tensor(test_data).float(), torch.tensor(test_target).float())
 
 # print(len(train[0][1][0]))
 letterwise_train = []
@@ -122,7 +122,7 @@ for i in range(num_epochs):
         train_word_acc = 0
         train_letter_acc = 0
         for y,y_predict in zip(train_Y,train_predictions) :
-            num_letters = torch.sum(y).item()                      ## Number of letters in the word
+            num_letters = int(torch.sum(y).item())                      ## Number of letters in the word
             if (torch.all(torch.eq(y[:num_letters], y_predict[:num_letters]))):      ## if all letters are predicted correct
                 train_word_acc += 1
             train_letter_acc += num_letters - (((~torch.eq(y[:num_letters],y_predict[:num_letters])).sum()) / 2).item()
