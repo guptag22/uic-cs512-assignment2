@@ -13,7 +13,7 @@ from crf import CRF
 batch_size = 64
 num_epochs = 10
 max_iters  = 1000
-print_iter = 25 # Prints results every n iterations
+# print_iter = 25 # Prints results every n iterations
 conv_shapes = [[1,64,128]] #
 
 
@@ -27,7 +27,7 @@ cuda = torch.cuda.is_available()
 crf_model = CRF(input_dim, embed_dim, conv_shapes, num_labels, batch_size)
 
 # Setup the optimizer
-opt = optim.LBFGS(crf_model.parameters())
+opt = optim.LBFGS(crf_model.parameters(), lr = 1)
 
 
 ##################################################
@@ -71,7 +71,10 @@ for i in range(num_epochs):
                                         pin_memory=False,  # whether to return an item pinned to GPU
                                         )
     print('Loaded dataset... ')
-
+    avg_word_acc_train = 0
+    avg_word_acc_test = 0
+    avg_letter_acc_train = 0
+    avg_letter_acc_test = 0
     # Now start training
     for i_batch, sample in enumerate(train_loader):
         print("\n----- Starting Epoch-{} Batch-{} ------".format(i,i_batch))
@@ -103,81 +106,95 @@ for i in range(num_epochs):
         # IMPLEMENT WORD-WISE AND LETTER-WISE ACCURACY HERE
         ##################################################################
         print("Starting Accuracy Calculation ....")
-        if step < 100 :
-            random_ixs = np.random.choice(test_data.shape[0], batch_size, replace=False)
-            test_X = test_data[random_ixs, :]
-            test_Y = test_target[random_ixs, :]
 
-            # Convert to torch
-            test_X = torch.from_numpy(test_X).float()
-            test_Y = torch.from_numpy(test_Y).long()
-            
-            total_train_letters = torch.sum(train_Y).item()
-            total_test_letters = torch.sum(test_Y).item()
-            total_train_words = len(train_Y)
-            total_test_words = len(test_Y)
+        random_ixs = np.random.choice(test_data.shape[0], batch_size, replace=False)
+        test_X = test_data[random_ixs, :]
+        test_Y = test_target[random_ixs, :]
 
-            if cuda:
-                test_X = test_X.cuda()
-                test_Y = test_Y.cuda()
-            with torch.no_grad() :
-                print("Getting Training predictions...")
-                train_predictions = crf_model(train_X)
-                print("Getting Test predictions...")
-                test_predictions = crf_model(test_X)
-            train_word_acc = 0
-            train_letter_acc = 0
-            for y,y_predict in zip(train_Y,train_predictions) :
-                num_letters = torch.sum(y).item()                      ## Number of letters in the word
-                if (torch.all(torch.eq(y[:num_letters], y_predict[:num_letters]))):      ## if all letters are predicted correct
-                    train_word_acc += 1
-                train_letter_acc += num_letters - (((~torch.eq(y[:num_letters],y_predict[:num_letters])).sum()) / 2).item()
-            test_word_acc = 0
-            test_letter_acc = 0
-            for y,y_predict in zip(test_Y,test_predictions) :
-                num_letters = torch.sum(y).item()                      ## Number of letters in the word
-                if (torch.all(torch.eq(y[:num_letters], y_predict[:num_letters]))):      ## if all letters are predicted correct
-                    test_word_acc += 1
-                test_letter_acc += num_letters - (((~torch.eq(y[:num_letters],y_predict[:num_letters])).sum()) / 2).item()
-            train_letter_acc /= total_train_letters
-            test_letter_acc /= total_test_letters
-            train_word_acc /= total_train_words
-            test_word_acc /= total_test_words
-            letterwise_train.append(train_letter_acc)
-            letterwise_test.append(test_letter_acc)
-            wordwise_train.append(train_word_acc)
-            wordwise_test.append(test_word_acc)
-            print("\nTraining Accuracy : ")
-            print("\tword accuracy = ",wordwise_train)
-            print("\tletter accuracy = ",letterwise_train)
-            print("Test Accuracy : ")
-            print("\tword accuracy = ",wordwise_test)
-            print("\tletter accuracy = ",letterwise_test)
-            
+        # Convert to torch
+        test_X = torch.from_numpy(test_X).float()
+        test_Y = torch.from_numpy(test_Y).long()
+        
+        total_train_letters = torch.sum(train_Y).item()
+        total_test_letters = torch.sum(test_Y).item()
+        total_train_words = len(train_Y)
+        total_test_words = len(test_Y)
+
+        if cuda:
+            test_X = test_X.cuda()
+            test_Y = test_Y.cuda()
+        with torch.no_grad() :
+            print("Getting Training predictions...")
+            train_predictions = crf_model(train_X)
+            print("Getting Test predictions...")
+            test_predictions = crf_model(test_X)
+        train_word_acc = 0
+        train_letter_acc = 0
+        for y,y_predict in zip(train_Y,train_predictions) :
+            num_letters = torch.sum(y).item()                      ## Number of letters in the word
+            if (torch.all(torch.eq(y[:num_letters], y_predict[:num_letters]))) :      ## if all letters are predicted correct
+                train_word_acc += 1
+            train_letter_acc += num_letters - (((~torch.eq(y[:num_letters],y_predict[:num_letters])).sum()) / 2).item()
+        test_word_acc = 0
+        test_letter_acc = 0
+        for y,y_predict in zip(test_Y,test_predictions) :
+            num_letters = torch.sum(y).item()                      ## Number of letters in the word
+            if (torch.all(torch.eq(y[:num_letters], y_predict[:num_letters]))):      ## if all letters are predicted correct
+                test_word_acc += 1
+            test_letter_acc += num_letters - (((~torch.eq(y[:num_letters],y_predict[:num_letters])).sum()) / 2).item()
+        ## Calculate accuracies for current batch (after current update step)
+        train_letter_acc /= total_train_letters
+        test_letter_acc /= total_test_letters
+        train_word_acc /= total_train_words
+        test_word_acc /= total_test_words
+        
+        ## collect accuracies for 100 steps
+        letterwise_train.append(train_letter_acc)
+        letterwise_test.append(test_letter_acc)
+        wordwise_train.append(train_word_acc)
+        wordwise_test.append(test_word_acc)
+        print("\nTraining Accuracy : ")
+        print("\tword accuracy = ",wordwise_train)
+        print("\tletter accuracy = ",letterwise_train)
+        print("Test Accuracy : ")
+        print("\tword accuracy = ",wordwise_test)
+        print("\tletter accuracy = ",letterwise_test)
+
+        ## Calculate average accuracies from first step till the current step
+        avg_word_acc_train = sum(wordwise_train) / len(wordwise_train)
+        avg_word_acc_test = sum(wordwise_test) / len(wordwise_test)
+        avg_letter_acc_train = sum(letterwise_train) / len(letterwise_train)
+        avg_letter_acc_test = sum(letterwise_test) / len(letterwise_test)
+    
+        print("\n avg_word_acc_train = {}\n avg_word_acc_test = {}\n avg_letter_acc_train = {}\n avg_letter_acc_test = {}\n".format(avg_word_acc_train,avg_word_acc_test,avg_letter_acc_train,avg_letter_acc_test))    
         print("Batch completed Epoch-{} Batch-{} Step-{} TIME ELAPSED = {}".format(i,i_batch,step,time.time() - start_batch))
         step += 1
         if step > max_iters: raise StopIteration
+    
     print("Epoch completed Epoch-{} Batch-{} Step-{} TIME ELAPSED = {}".format(i,i_batch,step-1,time.time() - start_epoch))
 
-print("\nTraining Accuracy : ")
-print("\tword accuracy = ",wordwise_train)
-print("\tletter accuracy = ",letterwise_train)
-print("Test Accuracy : ")
-print("\tword accuracy = ",wordwise_test)
-print("\tletter accuracy = ",letterwise_test)
-x = np.arange(1,101)
-fig, (ax1, ax2) = plt.subplots(1,2)
-ax1.plot(x,letterwise_train, label = "Batch Training Accuracy")
-ax1.plot(x,letterwise_test, label = "Batch Test Accuracy")
-ax1.set_title("Letterwise Accuracy")
-ax1.set_xlabel("Batches")
-ax1.set_ylabel("Accuracy")
-ax2.plot(x,wordwise_train, label = "Batch Training Accuracy")
-ax2.plot(x,wordwise_test, label = "Batch Test Accuracy")
-ax2.set_title("Wordwise Accuracy")
-ax2.set_xlabel("Batches")
-ax2.set_ylabel("Accuracy")
-plt.show()
+# print("\nTraining Accuracy : ")
+# print("\tword accuracy = ",wordwise_train)
+# print("\tletter accuracy = ",letterwise_train)
+# print("Test Accuracy : ")
+# print("\tword accuracy = ",wordwise_test)
+# print("\tletter accuracy = ",letterwise_test)
+
+
+
+# x = np.arange(1,101)
+# fig, (ax1, ax2) = plt.subplots(1,2)
+# ax1.plot(x,letterwise_train, label = "Batch Training Accuracy")
+# ax1.plot(x,letterwise_test, label = "Batch Test Accuracy")
+# ax1.set_title("Letterwise Accuracy")
+# ax1.set_xlabel("Batches")
+# ax1.set_ylabel("Accuracy")
+# ax2.plot(x,wordwise_train, label = "Batch Training Accuracy")
+# ax2.plot(x,wordwise_test, label = "Batch Test Accuracy")
+# ax2.set_title("Wordwise Accuracy")
+# ax2.set_xlabel("Batches")
+# ax2.set_ylabel("Accuracy")
+# plt.show()
             
 ### TODO : plot letterwise accuracy for training and test using letterwise_train and letterwise_test
 
