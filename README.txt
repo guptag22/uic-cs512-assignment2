@@ -34,4 +34,4 @@ The code for part (b) and (c) is device-agnostic, so it should run fine on CPU a
 
 
 ## Q5
-The code for this part is organized in a new directory `Q5`. Please refer to `Q5/readme.txt` for details.
+The code for this part is organized in a new directory `Q5`. Please refer to `/code/Q5/readme.txt` for details.
