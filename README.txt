@@ -30,7 +30,7 @@ $ python code/train_4c.py
 ```
 
 ###(d)
-The code for part (b) and (c) is device-agnostic, so it should run fine on CPU and GPU machines. Please see the report for wallclock time analysis.
+The code for part (b) and (c) is device-agnostic, so it should run fine on CPU and GPU machines. All our plots were made using `plot.py`. Please see the report for wallclock time analysis.
 
 
 ## Q5

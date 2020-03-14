@@ -44,38 +44,42 @@
 
 \usepackage[citecolor=blue, linkcolor=blue,colorlinks]{hyperref}
 
-\def\stuinfo#1#2{\def\@stuname{#1}\def\@stuemail{#2}}
+%\def\stuinfo#1#2{\def\@stuname{#1}\def\@stuemail{#2}}
 
-\def\lecturenumber#1{\def\@lecturenumber{#1}}
+%\def\lecturenumber#1{\def\@lecturenumber{#1}}
 % \@lecturenumber intentionally undefined
 
-\def\duedate#1{\def\@duedate{#1}}
+%\def\duedate#1{\def\@duedate{#1}}
 % \@lecturedata intentionally undefined
 
-\def\xxx{\vphantom{()}}
-\def\maketitle
-{
-\def\@oddhead{\underline{\hbox to\textwidth{\textbf{%
-    \rlap{CS 512\phantom{()}}\hfil
-    Assignment 2: CRFs and Convolutions
-    \hfil\llap{Spring 2020}}}}}
-\def\@oddfoot{\hfil\thepage\hfil}
-\def\ps@myfirst{\ps@plain\def\@oddfoot{\hfil\thepage\hfil}}
-\thispagestyle{myfirst}
-\noindent
-\framebox[\textwidth]{\vbox to 0.75in{
-\hbox to\textwidth{~\textbf{\rlap{CS 512: Advanced Topics in Machine Learning\xxx}
-    \hfil\llap{Due: \@duedate}}~}
-\vss
-\hbox to \textwidth{\Large\hfill Assignment 2: Conditional Random Fields and
-  Convolutions~\hfill}
-\vss
-\hbox to \textwidth{~\textsl{\rlap{Student: \@stuname\xxx}
-    \hfill\llap{Email: \@stuemail}}~}
-}}
-%\setcounter{chapter}{\@lecturenumber}
-\bigskip
-}
+%\def\xxx{\vphantom{()}}
+%\def\maketitle
+% {
+% \def\@oddhead{\underline{\hbox to\textwidth{\textbf{%
+%     \rlap{CS 512\phantom{()}}\hfil
+%     Assignment 1: Graphical Models (Programming Questions)
+%     \hfil\llap{Spring 2020}}}}}
+% \def\@oddfoot{\hfil\thepage\hfil}
+% \def\ps@myfirst{\ps@plain\def\@oddfoot{\hfil\thepage\hfil}}
+% \thispagestyle{myfirst}
+% \noindent
+% \framebox[\textwidth]{\vbox to 0.75in{
+% \hbox to\textwidth{~\textbf{\rlap{CS 512: Advanced Machine Learning\xxx}
+%     \hfil\llap{Due: \@duedate}}~}
+% \vss
+% \hbox to \textwidth{\Large\hfill Assignment 1: Graphical Models (Programming Questions)   ~\hfill}
+% %\vss
+% %\hbox to \textwidth{~\textsl{\rlap{Student: \@stuname\xxx}
+%  %   \hfill\llap{Email: \@stuemail}}~}
+% \vss
+% \author{Author A}
+% \author{Author B}
+% \author{Author C}
+% \author{Author D}
+% }}
+% %\setcounter{chapter}{\@lecturenumber}
+% \bigskip
+%}
 
 %\newtheorem{theorem}{Theorem}
 
@@ -196,12 +200,15 @@
 % sections
 \def\thesection {\arabic{section}}
 \def\thesubsection {\thesection.\arabic{subsection}}
+\def\thesubsubsection {\thesection.\arabic{subsection}.\arabic{subsubsection}}
 \def\section{\@startsection{section}{1}{\z@}{-0.12in}{0.02in}
              {\large\bf\raggedright}}
 \def\subsection{\@startsection{subsection}{2}{\z@}{-0.10in}{0.01in}
                 {\normalsize\bf\raggedright}}
-\def\subsubsection{\@startsection{subsubsection}{3}{\z@}{-0.08in}{0.01in}
-                {\normalsize\sc\raggedright}}
+%\def\subsubsection{\@startsection{subsubsection}{3}{\z@}{-0.08in}{0.01in}
+%                {\normalsize\sc\raggedright}}
+\def\subsubsection{\@startsection{subsubsection}{2}{\z@}{-0.10in}{0.01in}
+	{\normalsize\bf\raggedright}}
 \def\paragraph{\@startsection{paragraph}{4}{\z@}{1.5ex plus
   0.5ex minus .2ex}{-1em}{\normalsize\bf}}
 \def\subparagraph{\@startsection{subparagraph}{5}{\z@}{1.5ex plus
