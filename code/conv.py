@@ -5,6 +5,8 @@ import torch.utils.data as data_utils
 
 from data_loader import get_dataset
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
 class Conv(nn.Module):
     """
@@ -42,7 +44,7 @@ class Conv(nn.Module):
         target_shape = padded_image.shape[-2]-(self.kernel_size - 1), padded_image.shape[-1]-(self.kernel_size - 1)
         stop = self.kernel_size - 1
 
-        conv_images = torch.zeros((image.shape[0], image.shape[1], target_shape[0], target_shape[1]))
+        conv_images = torch.zeros((image.shape[0], image.shape[1], target_shape[0], target_shape[1])).to(device)
         for n in range(padded_image.shape[0]):
             for c in range(padded_image.shape[1]):
                 conv_image = list()
