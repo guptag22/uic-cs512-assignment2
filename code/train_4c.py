@@ -6,7 +6,7 @@ import torch.utils.data as data_utils
 from data_loader import get_dataset
 import matplotlib.pyplot as plt
 import numpy as np
-from crf import CRF
+from crf_4c import CRF
 
 
 # Tunable parameters

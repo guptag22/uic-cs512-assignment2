@@ -20,7 +20,8 @@ class CRF(nn.Module):
         """
         Initialize trainable parameters of CRF here
         """
-        self.conv_layer = Conv(5)
+        self.conv_layer1 = Conv(5)
+        self.conv_layer2 = Conv(3)
         self.params = nn.Parameter(torch.zeros(num_labels * embed_dim + num_labels**2))
         # self.w = params.narrow(0,0,num_labels * embed_dim).view(num_labels, embed_dim)
         # self.T = params.narrow(0,num_labels * embed_dim, num_labels**2).view(num_labels,num_labels)
@@ -34,7 +35,7 @@ class CRF(nn.Module):
         The input (features) to the CRF module should be convolution features.
         """
         X = self.__reshape_before_conv__(X)
-        features = self.conv_layer(X)
+        features = self.conv_layer2(self.conv_layer1(X))
         features = self.__reshape_after_conv__(features)
 
         prediction = crf_utils.dp_infer(features, self.params, self.num_labels, self.embed_dim)
@@ -45,7 +46,7 @@ class CRF(nn.Module):
         Compute the negative conditional log-likelihood of a labelling given a sequence.
         """
         X = self.__reshape_before_conv__(X)
-        self.features = self.conv_layer(X)
+        self.features = self.conv_layer2(self.conv_layer1(X))
         self.features = self.__reshape_after_conv__(self.features)
         C = 1000
         self.saved_for_backward = [labels, C]
