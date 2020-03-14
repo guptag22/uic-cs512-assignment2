@@ -92,37 +92,37 @@ def __reshape_after_conv__(X):
 
 
 if __name__ == "__main__":
-    # image = torch.tensor([[1,1,1,0,0],[0,1,1,1,0],[0,0,1,1,1],[0,0,1,1,0],[0,1,1,0,0]], dtype=torch.float)
-    # image = torch.unsqueeze(image, 0)
-    # image = torch.unsqueeze(image, 0)
-    # kernel = torch.tensor([[1, 0, 1],[0, 1, 0],[1, 0, 1]], dtype=torch.float)
-    conv = Conv(5, padding=True)
-    # print(conv(image))
+    image = torch.tensor([[1,1,1,0,0],[0,1,1,1,0],[0,0,1,1,1],[0,0,1,1,0],[0,1,1,0,0]], dtype=torch.float)
+    image = torch.unsqueeze(image, 0)
+    image = torch.unsqueeze(image, 0)
+    kernel = torch.tensor([[1, 0, 1],[0, 1, 0],[1, 0, 1]], dtype=torch.float)
+    conv = Conv(3, kernel_tensor=kernel)
+    print(conv(image))
 
-    # # check with PyTorch implementation
-    # kernel = torch.unsqueeze(kernel, 0)
-    # kernel = torch.unsqueeze(kernel, 0)
-    # print(get_torch_conv(image, kernel, 1))
+    # check with PyTorch implementation
+    kernel = torch.unsqueeze(kernel, 0)
+    kernel = torch.unsqueeze(kernel, 0)
+    print(get_torch_conv(image, kernel, 1))
 
-    # test with data loader
-    print("DATALOADER!!!")
-    dataset = get_dataset()
-    split = int(0.5 * len(dataset.data)) # train-test split
-    train_data, test_data = dataset.data[:split], dataset.data[split:]
-    train_target, test_target = dataset.target[:split], dataset.target[split:]
-    train = data_utils.TensorDataset(torch.tensor(train_data).float(), torch.tensor(train_target).long())
-    train_loader = data_utils.DataLoader(train,  # dataset to load from
-                                            batch_size=2,  # examples per batch (default: 1)
-                                            shuffle=True,
-                                            sampler=None,  # if a sampling method is specified, `shuffle` must be False
-                                            num_workers=1,  # subprocesses to use for sampling
-                                            pin_memory=False,  # whether to return an item pinned to GPU
-                                            )
-    for i_batch, sample in enumerate(train_loader):
-        train_sample = sample[0]
-        print(train_sample.shape)
-        X = __reshape_before_conv__(train_sample)
-        feat = conv(X)
-        print(feat.shape)
-        __reshape_after_conv__(feat)
-        break
+    # # test with data loader
+    # print("DATALOADER!!!")
+    # dataset = get_dataset()
+    # split = int(0.5 * len(dataset.data)) # train-test split
+    # train_data, test_data = dataset.data[:split], dataset.data[split:]
+    # train_target, test_target = dataset.target[:split], dataset.target[split:]
+    # train = data_utils.TensorDataset(torch.tensor(train_data).float(), torch.tensor(train_target).long())
+    # train_loader = data_utils.DataLoader(train,  # dataset to load from
+    #                                         batch_size=2,  # examples per batch (default: 1)
+    #                                         shuffle=True,
+    #                                         sampler=None,  # if a sampling method is specified, `shuffle` must be False
+    #                                         num_workers=1,  # subprocesses to use for sampling
+    #                                         pin_memory=False,  # whether to return an item pinned to GPU
+    #                                         )
+    # for i_batch, sample in enumerate(train_loader):
+    #     train_sample = sample[0]
+    #     print(train_sample.shape)
+    #     X = __reshape_before_conv__(train_sample)
+    #     feat = conv(X)
+    #     print(feat.shape)
+    #     __reshape_after_conv__(feat)
+    #     break

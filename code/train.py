@@ -21,10 +21,10 @@ conv_shapes = [[1,64,128]] #
 input_dim = 128
 embed_dim = 128
 num_labels = 26
-cuda = torch.cuda.is_available()
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Instantiate the CRF model
-crf_model = CRF(input_dim, embed_dim, conv_shapes, num_labels, batch_size)
+crf_model = CRF(input_dim, embed_dim, conv_shapes, num_labels, batch_size).to(device)
 
 # Setup the optimizer
 opt = optim.LBFGS(crf_model.parameters(), lr = 0.1)
@@ -42,8 +42,8 @@ train_data, test_data = dataset.data[:split], dataset.data[split:]
 train_target, test_target = dataset.target[:split], dataset.target[split:]
 
 # Convert dataset into torch tensors
-train = data_utils.TensorDataset(torch.tensor(train_data).float(), torch.tensor(train_target).long())
-test = data_utils.TensorDataset(torch.tensor(test_data).float(), torch.tensor(test_target).long())
+train = data_utils.TensorDataset(torch.tensor(train_data).float(), torch.tensor(train_target).float())
+test = data_utils.TensorDataset(torch.tensor(test_data).float(), torch.tensor(test_target).float())
 
 # print(len(train[0][1][0]))
 letterwise_train = []
@@ -79,13 +79,9 @@ for i in range(num_epochs):
     for i_batch, sample in enumerate(train_loader):
         print("\n----- Starting Epoch-{} Batch-{} ------".format(i,i_batch))
         start_batch = time.time()
-        train_X = sample[0]
-        train_Y = sample[1]
+        train_X = sample[0].to(device)
+        train_Y = sample[1].to(device)
         print(train_Y.dtype)
-
-        if cuda:
-            train_X = train_X.cuda()
-            train_Y = train_Y.cuda()
         
         # compute loss, grads, updates:
         def closure() :
