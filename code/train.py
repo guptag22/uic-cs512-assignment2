@@ -108,17 +108,14 @@ for i in range(num_epochs):
         test_Y = test_target[random_ixs, :]
 
         # Convert to torch
-        test_X = torch.from_numpy(test_X).float()
-        test_Y = torch.from_numpy(test_Y).long()
+        test_X = torch.from_numpy(test_X).float().to(device)
+        test_Y = torch.from_numpy(test_Y).long().to(device)
         
         total_train_letters = torch.sum(train_Y).item()
         total_test_letters = torch.sum(test_Y).item()
         total_train_words = len(train_Y)
         total_test_words = len(test_Y)
 
-        if cuda:
-            test_X = test_X.cuda()
-            test_Y = test_Y.cuda()
         with torch.no_grad() :
             print("Getting Training predictions...")
             train_predictions = crf_model(train_X)
@@ -127,14 +124,14 @@ for i in range(num_epochs):
         train_word_acc = 0
         train_letter_acc = 0
         for y,y_predict in zip(train_Y,train_predictions) :
-            num_letters = torch.sum(y).item()                      ## Number of letters in the word
+            num_letters = int(torch.sum(y).item())                      ## Number of letters in the word
             if (torch.all(torch.eq(y[:num_letters], y_predict[:num_letters]))) :      ## if all letters are predicted correct
                 train_word_acc += 1
             train_letter_acc += num_letters - (((~torch.eq(y[:num_letters],y_predict[:num_letters])).sum()) / 2).item()
         test_word_acc = 0
         test_letter_acc = 0
         for y,y_predict in zip(test_Y,test_predictions) :
-            num_letters = torch.sum(y).item()                      ## Number of letters in the word
+            num_letters = int(torch.sum(y).item())                      ## Number of letters in the word
             if (torch.all(torch.eq(y[:num_letters], y_predict[:num_letters]))):      ## if all letters are predicted correct
                 test_word_acc += 1
             test_letter_acc += num_letters - (((~torch.eq(y[:num_letters],y_predict[:num_letters])).sum()) / 2).item()
